@@ -113,6 +113,16 @@ td.sidebar {
   background: #ffc;
 }
 
+/* Users index page */
+
+ul.users {
+  margin-top: 1em;
+}
+
+.users li {
+  list-style: none;
+}
+
 .profile img.gravatar {
   border: 1px solid #999;
   margin-bottom: -15px;
