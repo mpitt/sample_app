@@ -49,6 +49,28 @@ describe UsersController do
         response.should have_selector("a", :href => "/users?page=2",
                                            :content => "Next")
       end
+      
+      it "shouldn't show delete links" do
+        get :index
+        response.should_not have_selector("a", :content => "delete")
+      end
+    end
+    
+    describe "for admin users" do
+      before(:each) do
+        @user = test_sign_in(Factory(:user, :admin => true))
+        second = Factory(:user, :name => "Bob", :email => "another@example.com")
+        third  = Factory(:user, :name => "Ben", :email => "another@example.net")
+        @users = [@user, second, third]
+        30.times do
+          @users << Factory(:user, :email => Factory.next(:email))
+        end
+      end
+      
+      it "should show delete links" do
+        get :index
+        response.should have_selector("a", :content => "delete")
+      end
     end
   end
   
@@ -113,6 +135,17 @@ describe UsersController do
       get :new
       response.should have_selector("input[name='user[password_confirmation]'][type='password']")
     end
+    
+    describe "for signed-in users" do
+      before(:each) do
+        test_sign_in(Factory(:user))
+      end
+      
+      it "should redirect to the root path" do
+        get :new
+        response.should redirect_to(root_path)
+      end
+    end
   end
   
   describe "POST 'create'" do
@@ -164,6 +197,17 @@ describe UsersController do
       it "should sign the user in" do
         post :create, :user => @attr
         controller.should be_signed_in
+      end
+    end
+    
+    describe "for signed-in users" do
+      before(:each) do
+        test_sign_in(Factory(:user))
+      end
+      
+      it "should redirect to the root path" do
+        post :create, :user => @attr
+        response.should redirect_to(root_path)
       end
     end
   end
@@ -297,8 +341,8 @@ describe UsersController do
     
     describe "as an admin user" do
       before(:each) do
-        admin = Factory(:user, :email => "admin@example.com", :admin => true)
-        test_sign_in admin
+        @admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in @admin
       end
       
       it "should destroy the user" do
@@ -310,6 +354,19 @@ describe UsersController do
       it "should redirect to the users page" do
         delete :destroy, :id => @user
         response.should redirect_to(users_path)
+      end
+      
+      describe "if the user tries to delete himself" do
+        it "should not destroy the user" do
+            lambda do
+              delete :destroy, :id => @admin
+            end.should_not change(User, :count)
+        end
+        
+        it "should show a flash error message" do
+          delete :destroy, :id => @admin
+          flash[:error].should =~ /can't delete yourself/
+        end
       end
     end
   end
